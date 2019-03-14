@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 void testReadBinary();
+void printBit(unsigned int val,int size);
+unsigned int getMnistSize(FILE *fp);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -9,13 +12,39 @@ int main(int argc, char const *argv[]){
     return 0;
 }
 
+void printBit(unsigned int val,int size){
+    unsigned int flag;
+    flag = 1<<(size-1);
+    for(int i = 0;i < size;i++){
+        if(i%4 == 0) printf(" ");
+        if(val&flag) printf("1");
+        else printf("0");
+        flag = flag>>1;
+    }
+    printf("\n");
+}
+
+unsigned int getMnistSize(FILE *fp){
+    unsigned int size = 0;
+    unsigned char tmp_c[4];
+    fseek(fp,4,SEEK_SET);
+    fread(&tmp_c,1,4,fp);
+    for(int i = 0;i < 3;i++){
+        size += tmp_c[i];
+        size = size<<8;
+    }
+    size += tmp_c[3];
+    return size;
+}
+
 void testReadBinary(char fname[]){
     FILE *fp;
     unsigned char dataType[4];
-    char rows;
-    char cols;
+    unsigned char rows;
+    unsigned char cols;
     unsigned char val;
-    char flag;
+    unsigned int fsize = 0;
+    unsigned int flag;
     
     fp = fopen(fname,"rb");
     if(fp == NULL){
@@ -23,6 +52,33 @@ void testReadBinary(char fname[]){
         exit(-1);
     }
 
+    fsize = 0;
+    fseek(fp,4,SEEK_SET);
+    fread(&fsize,4,1,fp);
+    printf("all fsize = %d\n",fsize);
+    printBit(fsize,32);
+    
+    fsize = 0b1110101001100000;
+    printf("all fsize = %d\n",fsize);
+    printBit(fsize,32);
+
+
+    fsize = 10000;
+    printf("all fsize = %d\n",fsize);
+    flag = 1<<31;
+    printBit(fsize,32);
+
+    fsize = 0;
+    fseek(fp,4,SEEK_SET);
+    fread(&fsize,1,1,fp);
+    printf("fsize = %d\n",fsize);
+    fread(&fsize,1,1,fp);
+    printf("fsize = %d\n",fsize);
+    fread(&fsize,1,1,fp);
+    printf("fsize = %d\n",fsize);
+    fread(&fsize,1,1,fp);
+    printf("fsize = %d\n",fsize);
+    
     fseek(fp,8+3,SEEK_SET);
     fread(&rows,1,1,fp);
     fseek(fp,12+3,SEEK_SET);
@@ -37,7 +93,9 @@ void testReadBinary(char fname[]){
         }
         printf("\n");
     }
+    
 
+    getMnistSize(fp);
 
     fclose(fp);
 }
