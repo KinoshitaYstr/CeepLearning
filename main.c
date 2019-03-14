@@ -3,8 +3,11 @@
 #include <math.h>
 
 void testReadBinary();
+
 void printBit(unsigned int val,int size);
 unsigned int getMnistSize(FILE *fp);
+unsigned char getRows(FILE *fp);
+unsigned char getCols(FILE *fp);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -35,6 +38,20 @@ unsigned int getMnistSize(FILE *fp){
     }
     size += tmp_c[3];
     return size;
+}
+
+unsigned char getRows(FILE *fp){
+    unsigned char rows;
+    fseek(fp,8+3,SEEK_SET);
+    fread(&rows,1,1,fp);
+    return rows;
+}
+
+unsigned char getCols(FILE *fp){
+    unsigned char cols;
+    fseek(fp,12+3,SEEK_SET);
+    fread(&cols,1,1,fp);
+    return cols;
 }
 
 void testReadBinary(char fname[]){
