@@ -7,7 +7,9 @@ void testReadBinary();
 void printBit(unsigned int val,int size);
 unsigned int getMnistSize(FILE *fp);
 unsigned char getRows(FILE *fp);
-unsigned char getCols(FILE *fp);
+unsigned char getCols(FILE *fp);double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
+double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
+void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -54,6 +56,30 @@ unsigned char getCols(FILE *fp){
     return cols;
 }
 
+double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num){
+    double** m;
+    unsigned char tmp;
+    fseek(fp,16+num*rows*cols,SEEK_SET);
+    m = (double* *)malloc(sizeof(double*)*rows);
+    for(int i = 0;i < rows;i++) m[i] = (double*)malloc(sizeof(double)*cols);
+    for(int i = 0;i < rows;i++){
+        for(int j = 0;j < cols;j++){
+            fread(&tmp,1,1,fp);
+            m[i][j] = (double)tmp;
+        }
+    }
+    return m;
+}
+
+void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols){
+    for(int i = 0;i < rows;i++){
+        for(int j = 0;j < cols;j++){
+            printf("%4d",(int)m[i][j]);
+        }
+        printf("\n");
+    }
+}
+
 void testReadBinary(char fname[]){
     FILE *fp;
     unsigned char dataType[4];
@@ -61,7 +87,7 @@ void testReadBinary(char fname[]){
     unsigned char cols;
     unsigned char val;
     unsigned int fsize = 0;
-    unsigned int flag;
+    double** m;
     
     fp = fopen(fname,"rb");
     if(fp == NULL){
@@ -69,50 +95,19 @@ void testReadBinary(char fname[]){
         exit(-1);
     }
 
-    fsize = 0;
-    fseek(fp,4,SEEK_SET);
-    fread(&fsize,4,1,fp);
-    printf("all fsize = %d\n",fsize);
-    printBit(fsize,32);
-    
-    fsize = 0b1110101001100000;
-    printf("all fsize = %d\n",fsize);
-    printBit(fsize,32);
+    fsize = getMnistSize(fp);
+    printf("fsize is %d\n",fsize);
+    rows = getRows(fp);
+    printf("rows is %d\n",rows);
+    cols = getCols(fp);
+    printf("cols is %d\n",cols);
 
-
-    fsize = 10000;
-    printf("all fsize = %d\n",fsize);
-    flag = 1<<31;
-    printBit(fsize,32);
-
-    fsize = 0;
-    fseek(fp,4,SEEK_SET);
-    fread(&fsize,1,1,fp);
-    printf("fsize = %d\n",fsize);
-    fread(&fsize,1,1,fp);
-    printf("fsize = %d\n",fsize);
-    fread(&fsize,1,1,fp);
-    printf("fsize = %d\n",fsize);
-    fread(&fsize,1,1,fp);
-    printf("fsize = %d\n",fsize);
-    
-    fseek(fp,8+3,SEEK_SET);
-    fread(&rows,1,1,fp);
-    fseek(fp,12+3,SEEK_SET);
-    fread(&cols,1,1,fp);
-    printf("(rows,cols) = (%d,%d)\n",rows,cols);
-    
-    fseek(fp,16,SEEK_SET);
-    for(int c = 0;c < cols;c++){
-        for(int r = 0;r < rows;r++){
-            fread(&val,1,1,fp);
-            printf("%4d",val);
-        }
-        printf("\n");
+    m = (double* *)malloc(sizeof(double*)*rows);
+    for(int i = 0;i < rows;i++) m[i] = (double *)malloc(sizeof(double)*cols);
+    for(int i = 0;i < 3;i++){
+        m = getMnistMatrix(fp,rows,cols,i);
+        printDoubleMatrix(m,rows,cols);
     }
-    
-
-    getMnistSize(fp);
 
     fclose(fp);
 }
