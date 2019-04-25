@@ -88,8 +88,8 @@ void writeDoubleMatrix2IntInCSV(double *m[],unsigned char rows,unsigned char col
         exit(-1);
     }
     for(int i = 0;i < rows;i++){
-        for(int j = 0;j < cols;j++) fprintf(fp,"%d,",(int)m[i][j]);
-        fprintf(fp,"\n");
+        for(int j = 0;j < cols-1;j++) fprintf(fp,"%d,",(int)m[i][j]);
+        fprintf(fp,"%d\n",(int)m[i][cols-1]);
     }
     fclose(fp);
 }
