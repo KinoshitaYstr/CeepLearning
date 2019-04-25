@@ -2,28 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 
-typedef struct{
-    unsigned short bfType;
-	unsigned long  bfSize;
-	unsigned short bfReserved1;
-	unsigned short bfReserved2;
-	unsigned long  bfOffBits;
-} BITMAPFILEHEADER;
-
-typedef struct{
-    unsigned long biSize;
-	         long biWidth;
-	         long biHeight;
-	unsigned short biPlanes;
-	unsigned short biBitCount;
-	unsigned long biCompression;
-	unsigned long biSizeimage;
-	         long biXPixPerMeter;
-	         long biYPixPerMeter;
-	unsigned long biClrUsed;
-	unsigned long biClrImportant;
-}BITMAPINFOHEADER;
-
 void testReadBinary();
 
 void printBit(unsigned int val,int size);
@@ -32,9 +10,6 @@ unsigned char getRows(FILE *fp);
 unsigned char getCols(FILE *fp);double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
 double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
 void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols);
-BITMAPFILEHEADER createBitMapFileHeaderForRGB_DATA(int width,int heigth);
-BITMAPINFOHEADER createBitMapInfoHeaderForRGB_DATA(int width,int heigth);
-void createBMPForMono(char fname[],double *m[],unsigned char rows,unsigned char cols);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -105,81 +80,6 @@ void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols){
     }
 }
 
-BITMAPFILEHEADER createBitMapFileHeaderForRGB_DATA(int width,int heigth)
-{
-    BITMAPFILEHEADER header;
-    header.bfType = 0x4d42;
-    //header.bfSize = 54+width*heigth*3;
-    header.bfSize = 54-24+width*heigth*3;
-    header.bfReserved1 = 0x00;
-    header.bfReserved2 = 0x00;
-    //header.bfOffBits = 54;
-    header.bfOffBits = 54-24;
-    return header;
-}
-
-BITMAPINFOHEADER createBitMapInfoHeaderForRGB_DATA(int width,int heigth)
-{
-    BITMAPINFOHEADER header;
-    header.biSize = 40;
-    header.biWidth = width;
-    header.biHeight = heigth;
-    header.biPlanes = 1;
-    header.biBitCount = 24;
-    //header.biCompression = 0;
-    //header.biSizeimage = 3*heigth*width;
-    //header.biXPixPerMeter = 0;
-    //header.biYPixPerMeter = 0;
-    //header.biClrUsed = 0;
-    //header.biClrImportant = 0;
-    return header;
-}
-
-void createBMPForMono(char fname[],double *m[],unsigned char rows,unsigned char cols)
-{
-    FILE *fp;
-    BITMAPFILEHEADER fileHeader;
-    BITMAPINFOHEADER infoHeader;
-    unsigned char val;
-    if((fp = fopen(fname,"wb")) == NULL)
-    {
-        printf("create BMP file error\n");
-        exit(-1);
-    }
-    fileHeader = createBitMapFileHeaderForRGB_DATA((int)cols,(int)rows);
-    infoHeader = createBitMapInfoHeaderForRGB_DATA((int)cols,(int)rows);
-    fseek(fp,0,SEEK_SET);
-    fwrite(&fileHeader.bfType,sizeof(unsigned short),1,fp);
-    fwrite(&fileHeader.bfSize,sizeof(unsigned long),1,fp);
-    fwrite(&fileHeader.bfReserved1,sizeof(unsigned short),1,fp);
-    fwrite(&fileHeader.bfReserved2,sizeof(unsigned short),1,fp);
-    fwrite(&fileHeader.bfOffBits,sizeof(unsigned long),1,fp);
-    fseek(fp,14,SEEK_SET);
-    fwrite(&infoHeader.biSize,sizeof(unsigned long),1,fp);
-    fwrite(&infoHeader.biWidth,sizeof(long),1,fp);
-    fwrite(&infoHeader.biHeight,sizeof(long),1,fp);
-    fwrite(&infoHeader.biPlanes,sizeof(unsigned short),1,fp);
-    fwrite(&infoHeader.biBitCount,sizeof(unsigned short),1,fp);
-    fwrite(&infoHeader.biCompression,sizeof(unsigned long),1,fp);
-    fwrite(&infoHeader.biSizeimage,sizeof(unsigned long),1,fp);
-    fwrite(&infoHeader.biXPixPerMeter,sizeof(long),1,fp);
-    fwrite(&infoHeader.biYPixPerMeter,sizeof(long),1,fp);
-    fwrite(&infoHeader.biClrUsed,sizeof(unsigned long),1,fp);
-    fwrite(&infoHeader.biClrImportant,sizeof(unsigned long),1,fp);
-    fseek(fp,54,SEEK_SET);
-    for(int i = 0;i < infoHeader.biHeight;i++)
-    {
-        for(int j = 0;j < infoHeader.biWidth;j++)
-        {
-            val = (unsigned char)m[i][j];
-            fwrite(&val,sizeof(unsigned char),1,fp);
-            fwrite(&val,sizeof(unsigned char),1,fp);
-            fwrite(&val,sizeof(unsigned char),1,fp);
-        }
-    }
-    fclose(fp);
-}
-
 void testReadBinary(char fname[]){
     FILE *fp;
     unsigned char dataType[4];
@@ -207,7 +107,6 @@ void testReadBinary(char fname[]){
     for(int i = 0;i < 3;i++){
         m = getMnistMatrix(fp,rows,cols,i);
         printDoubleMatrix(m,rows,cols);
-        createBMPForMono("test.bmp",m,rows,cols);
     }
 
     fclose(fp);
