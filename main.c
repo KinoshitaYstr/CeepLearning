@@ -10,6 +10,7 @@ unsigned char getRows(FILE *fp);
 unsigned char getCols(FILE *fp);double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
 double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
 void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols);
+void writeDoubleMatrix2IntInCSV(double *m[],unsigned char rows,unsigned char cols,char fname[]);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -80,6 +81,19 @@ void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols){
     }
 }
 
+void writeDoubleMatrix2IntInCSV(double *m[],unsigned char rows,unsigned char cols,char fname[]){
+    FILE *fp;
+    if((fp = fopen(fname,"w")) == NULL){
+        printf("create file error\n");
+        exit(-1);
+    }
+    for(int i = 0;i < rows;i++){
+        for(int j = 0;j < cols;j++) fprintf(fp,"%d,",(int)m[i][j]);
+        fprintf(fp,"\n");
+    }
+    fclose(fp);
+}
+
 void testReadBinary(char fname[]){
     FILE *fp;
     unsigned char dataType[4];
@@ -107,6 +121,7 @@ void testReadBinary(char fname[]){
     for(int i = 0;i < 3;i++){
         m = getMnistMatrix(fp,rows,cols,i);
         printDoubleMatrix(m,rows,cols);
+        writeDoubleMatrix2IntInCSV(m,rows,cols,"test.csv");
     }
 
     fclose(fp);
