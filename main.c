@@ -37,6 +37,7 @@ void exchangeMatrx2Vector(matrix m,vector *v);
 void exchangeVector2Matrix(vector v,matrix *m);
 void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_size);
 void calcVectorNeuron(vector v,neuron_params n,vector *r);
+double sigmoid(double x);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -153,8 +154,8 @@ void testReadBinary(char fname[]){
     initMatrix(&testM,fp);
     initVector(&v,fp);
     initVector(&tmp,fp);
+    initNeuron(&n,v.size,tmp.size);
     for(int i = 0;i < 1;i++){
-        initNeuron(&n,v.size,tmp.size);
         readMnistMatrix(&testM,fp,i);
         exchangeMatrx2Vector(testM,&v);
         calcVectorNeuron(v,n,&tmp);
@@ -224,7 +225,10 @@ void calcVectorNeuron(vector v,neuron_params n,vector *r){
         for(int j = 0;j < n.input_size;j++){
             r->v[i] += v.v[j]*n.weights[i][j];
         }
-        r->v[i] += n.bias[i];
+        r->v[i] = sigmoid(r->v[i]+n.bias[i]);
     }
 }
 
+double sigmoid(double x){
+    return 1/(1+exp(-1*x));
+}
