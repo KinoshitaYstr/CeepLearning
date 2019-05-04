@@ -9,7 +9,7 @@ typedef struct{
 }matrix;
 
 typedef struct{
-    unsigned char size;
+    unsigned int size;
     double *v;
 }vector;
 
@@ -26,6 +26,8 @@ void initMatrix(matrix *m,FILE *fp);
 void readMnistMatrix(matrix *m,FILE *fp,int num);
 void initVector(vector *v,FILE *fp);
 void readMnistVector(vector *v,FILE *fp,int num);
+void exchangeMatrx2Vector(matrix m,vector *v);
+void exchangeVector2Matrix(vector v,matrix *m);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -120,6 +122,7 @@ void testReadBinary(char fname[]){
     unsigned char val;
     unsigned int fsize = 0;
     matrix testM;
+    vector v;
 
     fp = fopen(fname,"rb");
     if(fp == NULL){
@@ -130,8 +133,11 @@ void testReadBinary(char fname[]){
     fsize = getMnistSize(fp);
     printf("fsize is %d\n",fsize);
     initMatrix(&testM,fp);
+    initVector(&v,fp);
     for(int i = 0;i < 3;i++){
         readMnistMatrix(&testM,fp,i);
+        exchangeMatrx2Vector(testM,&v);
+        exchangeVector2Matrix(v,&testM);
         printDoubleMatrix(testM);
         writeDoubleMatrix2IntInCSV(testM,"result/test.csv");
     }
@@ -154,4 +160,19 @@ void readMnistVector(vector *v,FILE *fp,int num){
         fread(&tmp,1,1,fp);
         v->v[i] = (double)tmp;
     }
+}
+
+void exchangeMatrx2Vector(matrix m,vector *v){
+    v->size = m.row*m.col;
+    for(int i = 0;i < m.row;i++)
+        for(int j = 0;j < m.col;j++)
+            v->v[i*m.row+j] = m.m[i][j];
+}
+
+void exchangeVector2Matrix(vector v,matrix *m){
+    m->row = (unsigned char)sqrt((double)v.size);
+    m->col = m->row;
+    for(int i = 0;i < m->row;i++)
+        for(int j = 0;j < m->col;j++)
+            m->m[i][j] = v.v[i*m->row+j];
 }
