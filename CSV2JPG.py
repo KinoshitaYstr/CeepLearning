@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 import csv
+import glob
 
 def saveImageFromNumpy(m,fname):
     img = Image.fromarray(np.uint8(m))
@@ -12,15 +13,17 @@ def saveImageFromCSV(csv_name,fname):
     for line in f:
         l = []
         for val in line.split(","):
-            print(int(val))
             l.append(int(val))
         data_list.append(np.array(l))
     data = np.array(data_list)
-    print(data)
     saveImageFromNumpy(data,fname)
     f.close()
 
 
 if __name__ == "__main__":
-    saveImageFromCSV("result/test.csv","result_img/aaa.jpg")
-
+    fnames = glob.glob("result/*.csv")
+    for fname in fnames:
+        fname2 = "result_img/{0}".format(fname.split("/")[-1])
+        fname2 = "{0}.jpg".format(fname2.split(".")[0])
+        print("{0} -> {1}".format(fname,fname2))
+        saveImageFromCSV(fname,fname2)
