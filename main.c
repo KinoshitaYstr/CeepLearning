@@ -2,15 +2,23 @@
 #include <stdlib.h>
 #include <math.h>
 
+typedef struct{
+    unsigned char row;
+    unsigned char col;
+    double **m;
+}matrix;
+
 void testReadBinary();
 
 void printBit(unsigned int val,int size);
 unsigned int getMnistSize(FILE *fp);
 unsigned char getRows(FILE *fp);
-unsigned char getCols(FILE *fp);double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
+unsigned char getCols(FILE *fp);
 double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num);
-void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols);
-void writeDoubleMatrix2IntInCSV(double *m[],unsigned char rows,unsigned char cols,char fname[]);
+void printDoubleMatrix(matrix m);
+void writeDoubleMatrix2IntInCSV(matrix m,char fname[]);
+void initMatrix(matrix *m,FILE *fp);
+void readMnistMatrix(matrix *m,FILE *fp,int num);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -72,26 +80,37 @@ double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num){
     return m;
 }
 
-void printDoubleMatrix(double *m[],unsigned char rows,unsigned char cols){
-    for(int i = 0;i < rows;i++){
-        for(int j = 0;j < cols;j++){
-            printf("%4d",(int)m[i][j]);
+void printDoubleMatrix(matrix m){
+    for(int i = 0;i < m.row;i++){
+        for(int j = 0;j < m.col;j++){
+            printf("%4d",(int)m.m[i][j]);
         }
         printf("\n");
     }
 }
 
-void writeDoubleMatrix2IntInCSV(double *m[],unsigned char rows,unsigned char cols,char fname[]){
+void writeDoubleMatrix2IntInCSV(matrix m,char fname[]){
     FILE *fp;
     if((fp = fopen(fname,"w")) == NULL){
         printf("create file error\n");
         exit(-1);
     }
-    for(int i = 0;i < rows;i++){
-        for(int j = 0;j < cols-1;j++) fprintf(fp,"%d,",(int)m[i][j]);
-        fprintf(fp,"%d\n",(int)m[i][cols-1]);
+    for(int i = 0;i < m.row;i++){
+        for(int j = 0;j < m.col-1;j++) fprintf(fp,"%d,",(int)m.m[i][j]);
+        fprintf(fp,"%d\n",(int)m.m[i][m.col-1]);
     }
     fclose(fp);
+}
+
+void initMatrix(matrix *m,FILE *fp){
+    m->row = getRows(fp);
+    m->col = getCols(fp);
+    m->m = (double* *)malloc(sizeof(double*)*m->row);
+    for(int i = 0;i < m->row;i++) m->m[i] = (double *)malloc(sizeof(double)*m->col);
+}
+
+void readMnistMatrix(matrix *m,FILE *fp,int num){
+    m->m = getMnistMatrix(fp,m->row,m->col,num);
 }
 
 void testReadBinary(char fname[]){
@@ -101,8 +120,8 @@ void testReadBinary(char fname[]){
     unsigned char cols;
     unsigned char val;
     unsigned int fsize = 0;
-    double** m;
-    
+    matrix testM;
+
     fp = fopen(fname,"rb");
     if(fp == NULL){
         fputs("file read open error\n",stderr);
@@ -111,18 +130,15 @@ void testReadBinary(char fname[]){
 
     fsize = getMnistSize(fp);
     printf("fsize is %d\n",fsize);
-    rows = getRows(fp);
-    printf("rows is %d\n",rows);
-    cols = getCols(fp);
-    printf("cols is %d\n",cols);
-
-    m = (double* *)malloc(sizeof(double*)*rows);
-    for(int i = 0;i < rows;i++) m[i] = (double *)malloc(sizeof(double)*cols);
+    initMatrix(&testM,fp);
     for(int i = 0;i < 3;i++){
-        m = getMnistMatrix(fp,rows,cols,i);
-        printDoubleMatrix(m,rows,cols);
-        writeDoubleMatrix2IntInCSV(m,rows,cols,"result/test.csv");
+        readMnistMatrix(&testM,fp,i);
+        printDoubleMatrix(testM);
+        writeDoubleMatrix2IntInCSV(testM,"result/test.csv");
     }
+    printf("-------------------------------");
+    printf("%d,%d\n",testM.col,testM.row);
+    printDoubleMatrix(testM);
 
     fclose(fp);
 }
