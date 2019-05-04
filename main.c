@@ -15,9 +15,10 @@ typedef struct{
 }vector;
 
 typedef struct{
-    double bias;
-    double *weights;
-    unsigned int weights_size;
+    double *bias;
+    double **weights;
+    unsigned int input_size;
+    unsigned int output_size;
 }neuron_params;
 
 void testReadBinary();
@@ -34,8 +35,8 @@ void initVector(vector *v,FILE *fp);
 void readMnistVector(vector *v,FILE *fp,int num);
 void exchangeMatrx2Vector(matrix m,vector *v);
 void exchangeVector2Matrix(vector v,matrix *m);
-void initNeuron(neuron_params *n,unsigned int size);
-double calcVectorNeuron(vector v,neuron_params n);
+void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_size);
+void calcVectorNeuron(vector v,neuron_params n,vector *r);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -101,11 +102,11 @@ void writeDoubleMatrix2IntInCSV(matrix m,char fname[]){
     for(int i = 0;i < m.row;i++){
         for(int j = 0;j < m.col-1;j++){
             tmp = m.m[i][j] <= 0.0 ? 0 : (int)(m.m[i][j]*255);
-            tmp = tmp > 255 ? 255 : tmp;
+            tmp = tmp >= 255 ? 255 : tmp;
             fprintf(fp,"%d,",tmp);
         }
         tmp = m.m[i][m.col-1] <= 0.0 ? 0 : (int)(m.m[i][m.col-1]*255);
-        tmp = tmp > 255 ? 255 : tmp;
+        tmp = tmp >= 255 ? 255 : tmp;
         fprintf(fp,"%d\n",tmp);
     }
     fclose(fp);
@@ -138,6 +139,7 @@ void testReadBinary(char fname[]){
     unsigned int fsize = 0;
     matrix testM;
     vector v;
+    vector tmp;
     neuron_params n;
 
     fp = fopen(fname,"rb");
@@ -150,11 +152,13 @@ void testReadBinary(char fname[]){
     printf("fsize is %d\n",fsize);
     initMatrix(&testM,fp);
     initVector(&v,fp);
-    initNeuron(&n,v.size);
-    for(int i = 0;i < 3;i++){
+    initVector(&tmp,fp);
+    for(int i = 0;i < 1;i++){
+        initNeuron(&n,v.size,tmp.size);
         readMnistMatrix(&testM,fp,i);
         exchangeMatrx2Vector(testM,&v);
-        printf("calc = %f\n",calcVectorNeuron(v,n));
+        calcVectorNeuron(v,n,&tmp);
+        v = tmp;
         exchangeVector2Matrix(v,&testM);
         printDoubleMatrix(testM);
         writeDoubleMatrix2IntInCSV(testM,"result/test.csv");
@@ -195,20 +199,32 @@ void exchangeVector2Matrix(vector v,matrix *m){
             m->m[i][j] = v.v[i*m->row+j];
 }
 
-void initNeuron(neuron_params *n,unsigned int size){
+void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_size){
     srand((unsigned)time(NULL));
-    n->weights_size = size;
-    n->weights = (double *)malloc(sizeof(double)*size);
-    for(int i = 0;i < size;i++) n->weights[i] = (double)rand()/RAND_MAX;
-    n->bias = (double)rand()/RAND_MAX;
+    n->input_size = input_size;
+    n->output_size = output_size;
+    n->weights = (double* *)malloc(sizeof(double*)*output_size);
+    for(int i = 0;i < output_size;i++) n->weights[i] = (double *)malloc(sizeof(double)*input_size);
+    for(int i = 0;i < output_size;i++)
+        for(int j = 0;j < input_size;j++)
+            //n->weights[i][j] = 1;
+            n->weights[i][j] = (double)rand()/RAND_MAX;
+    n->bias = (double *)malloc(sizeof(double)*output_size);
+    for(int i = 0;i < output_size;i++) n->bias[i] = (double)rand()/RAND_MAX;
+    //for(int i = 0;i < output_size;i++) n->bias[i] = 0;
 }
 
-double calcVectorNeuron(vector v,neuron_params n){
-    if(v.size != n.weights_size){
+void calcVectorNeuron(vector v,neuron_params n,vector *r){
+    if(v.size != n.input_size || r->size != n.output_size){
         printf("vec and weight size error\n");
         exit(-1);
     }
-    double r = 0;
-    for(int i = 0;i < v.size;i++) r += v.v[i]*n.weights[i];
-    return r+n.bias;
+    for(int i = 0;i < n.output_size;i++){
+        r->v[i] = 0.0;
+        for(int j = 0;j < n.input_size;j++){
+            r->v[i] += v.v[j]*n.weights[i][j];
+        }
+        r->v[i] += n.bias[i];
+    }
 }
+
