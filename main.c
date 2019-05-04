@@ -25,7 +25,7 @@ typedef struct{
     double *array;
     unsigned int size;
     double result;
-}labal;
+}label;
 
 void testReadBinary();
 
@@ -44,9 +44,10 @@ void exchangeVector2Matrix(vector v,matrix *m);
 void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_size);
 void calcVectorNeuron(vector v,neuron_params n,vector *r);
 double sigmoid(double x);
-void initLabel(labal *l,unsigned int size);
-void readMnistLabel(labal *l,FILE *fp,int num);
+void initLabel(label *l,unsigned int size);
+void readMnistLabel(label *l,FILE *fp,int num);
 void softmax(vector input,vector *output);
+double getCrossEntropyError(vector r,label l);
 
 int main(int argc, char const *argv[]){
     //testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
@@ -57,7 +58,7 @@ int main(int argc, char const *argv[]){
     neuron_params wb2;
     vector h2;
     vector output;
-    labal label;
+    label label;
     FILE *dataset;
     FILE *labelset;
     unsigned int input_row;
@@ -65,6 +66,7 @@ int main(int argc, char const *argv[]){
     unsigned int input_size;
     unsigned int hidden_size;
     unsigned int output_size;
+    double e;
 
     if((dataset = fopen("dataset/mnist/t10k-images.idx3-ubyte","rb")) == NULL){
         fputs("file read open error\n",stderr);
@@ -94,6 +96,8 @@ int main(int argc, char const *argv[]){
     calcVectorNeuron(input,wb1,&h1);
     calcVectorNeuron(h1,wb2,&h2);
     softmax(h2,&output);
+    e = getCrossEntropyError(output,label);
+    printf("e = %f\n",e);
     
     fclose(dataset);
     fclose(labelset);
@@ -198,7 +202,7 @@ void testReadBinary(char fname[],char fname2[]){
     vector v;
     vector tmp;
     neuron_params n;
-    labal l;
+    label l;
 
     fp = fopen(fname,"rb");
     if(fp == NULL){
@@ -304,13 +308,13 @@ double sigmoid(double x){
     return 1/(1+exp(-1*x));
 }
 
-void initLabel(labal *l,unsigned int size){
+void initLabel(label *l,unsigned int size){
     l->array = (double *)malloc(sizeof(double)*size);
     l->size = size;
     l->result = 0;
 }
 
-void readMnistLabel(labal *l,FILE *fp,int num){
+void readMnistLabel(label *l,FILE *fp,int num){
     unsigned char tmp;
     fseek(fp,8+num,SEEK_SET);
     fread(&tmp,1,1,fp);
@@ -336,4 +340,8 @@ void softmax(vector input,vector *output){
         for(int i = 0;i < input.size;i++) all_exp = exp(input.v[i]-max_val);
         for(int i = 0;i < input.size;i++) output->v[i] = exp(input.v[i]-max_val)/all_exp;
     }
+}
+
+double getCrossEntropyError(vector r,label l){
+    return -1*log(r.v[(int)l.result]+0.000000001);
 }
