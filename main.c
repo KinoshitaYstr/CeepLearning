@@ -121,7 +121,7 @@ void testReadBinary(char fname[]){
     for(int i = 0;i < 3;i++){
         m = getMnistMatrix(fp,rows,cols,i);
         printDoubleMatrix(m,rows,cols);
-        writeDoubleMatrix2IntInCSV(m,rows,cols,"test.csv");
+        writeDoubleMatrix2IntInCSV(m,rows,cols,"result/test.csv");
     }
 
     fclose(fp);

@@ -22,5 +22,5 @@ def saveImageFromCSV(csv_name,fname):
 
 
 if __name__ == "__main__":
-    saveImageFromCSV("test.csv","aaa.jpg")
+    saveImageFromCSV("result/test.csv","result_img/aaa.jpg")
 
