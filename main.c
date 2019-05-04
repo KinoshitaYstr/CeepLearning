@@ -21,6 +21,12 @@ typedef struct{
     unsigned int output_size;
 }neuron_params;
 
+typedef struct{
+    double *array;
+    unsigned int size;
+    double result;
+}labal;
+
 void testReadBinary();
 
 void printBit(unsigned int val,int size);
@@ -38,10 +44,12 @@ void exchangeVector2Matrix(vector v,matrix *m);
 void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_size);
 void calcVectorNeuron(vector v,neuron_params n,vector *r);
 double sigmoid(double x);
+void initLabel(labal *l,unsigned int size);
+void readMnistLabel(labal *l,FILE *fp,int num);
 
 int main(int argc, char const *argv[]){
-    testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
-    testReadBinary("dataset/mnist/train-images.idx3-ubyte");
+    testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
+    testReadBinary("dataset/mnist/train-images.idx3-ubyte","dataset/mnist/train-labels.idx1-ubyte");
     return 0;
 }
 
@@ -131,8 +139,9 @@ void readMnistMatrix(matrix *m,FILE *fp,int num){
     }
 }
 
-void testReadBinary(char fname[]){
+void testReadBinary(char fname[],char fname2[]){
     FILE *fp;
+    FILE *fp2;
     unsigned char dataType[4];
     unsigned char rows;
     unsigned char cols;
@@ -142,8 +151,14 @@ void testReadBinary(char fname[]){
     vector v;
     vector tmp;
     neuron_params n;
+    labal l;
 
     fp = fopen(fname,"rb");
+    if(fp == NULL){
+        fputs("file read open error\n",stderr);
+        exit(-1);
+    }
+    fp2 = fopen(fname2,"rb");
     if(fp == NULL){
         fputs("file read open error\n",stderr);
         exit(-1);
@@ -155,6 +170,7 @@ void testReadBinary(char fname[]){
     initVector(&v,fp);
     initVector(&tmp,fp);
     initNeuron(&n,v.size,tmp.size);
+    initLabel(&l,10);
     for(int i = 0;i < 1;i++){
         readMnistMatrix(&testM,fp,i);
         exchangeMatrx2Vector(testM,&v);
@@ -167,6 +183,12 @@ void testReadBinary(char fname[]){
     printf("-------------------------------");
     printf("%d,%d\n",testM.col,testM.row);
     printDoubleMatrix(testM);
+    for(int j = 0;j < 100;j++){
+        readMnistLabel(&l,fp2,j);
+        printf("label is %f\n",l.result);
+        for(int i = 0;i < 10;i++) printf("%4.1f,",l.array[i]);
+        printf("\n");
+    }
 
     fclose(fp);
 }
@@ -231,4 +253,19 @@ void calcVectorNeuron(vector v,neuron_params n,vector *r){
 
 double sigmoid(double x){
     return 1/(1+exp(-1*x));
+}
+
+void initLabel(labal *l,unsigned int size){
+    l->array = (double *)malloc(sizeof(double)*size);
+    l->size = size;
+    l->result = 0;
+}
+
+void readMnistLabel(labal *l,FILE *fp,int num){
+    unsigned char tmp;
+    fseek(fp,8+num,SEEK_SET);
+    fread(&tmp,1,1,fp);
+    l->result = (double)tmp;
+    for(int i = 0;i < l->size;i++) l->array[i] = 0;
+    l->array[tmp] = 1.0;
 }
