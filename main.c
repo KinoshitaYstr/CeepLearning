@@ -35,9 +35,9 @@ unsigned char getRows(FILE *fp);
 unsigned char getCols(FILE *fp);
 void printDoubleMatrix(matrix m);
 void writeDoubleMatrix2IntInCSV(matrix m,char fname[]);
-void initMatrix(matrix *m,FILE *fp);
+void initMatrix(matrix *m,unsigned int row,unsigned int col);
 void readMnistMatrix(matrix *m,FILE *fp,int num);
-void initVector(vector *v,FILE *fp);
+void initVector(vector *v,unsigned int size);
 void readMnistVector(vector *v,FILE *fp,int num);
 void exchangeMatrx2Vector(matrix m,vector *v);
 void exchangeVector2Matrix(vector v,matrix *m);
@@ -48,8 +48,46 @@ void initLabel(labal *l,unsigned int size);
 void readMnistLabel(labal *l,FILE *fp,int num);
 
 int main(int argc, char const *argv[]){
-    testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
-    testReadBinary("dataset/mnist/train-images.idx3-ubyte","dataset/mnist/train-labels.idx1-ubyte");
+    //testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
+    //testReadBinary("dataset/mnist/train-images.idx3-ubyte","dataset/mnist/train-labels.idx1-ubyte");
+    vector input;
+    neuron_params wb1;
+    vector h1;
+    neuron_params wb2;
+    vector output;
+    labal label;
+    FILE *dataset;
+    FILE *labelset;
+    unsigned int input_row;
+    unsigned int input_col;
+    unsigned int input_size;
+    unsigned int hidden_size;
+    unsigned int output_size;
+
+    if((dataset = fopen("dataset/mnist/t10k-images.idx3-ubyte","rb")) == NULL){
+        fputs("file read open error\n",stderr);
+        exit(-1);
+    }
+    if((labelset = fopen("dataset/mnist/t10k-labels.idx1-ubyte","rb")) == NULL){
+        fputs("file read open error\n",stderr);
+        exit(-1);
+    }
+
+    input_row = getRows(dataset);
+    input_col = getCols(dataset);
+    input_size = input_row*input_row;
+    hidden_size = 100;
+    output_size = 10;
+
+    initVector(&input,input_size);
+    initNeuron(&wb1,input_size,hidden_size);
+    initVector(&h1,hidden_size);
+    initNeuron(&wb2,hidden_size,output_size);
+    initVector(&output,output_size);
+    initLabel(&label,output_size);
+
+    fclose(dataset);
+    fclose(labelset);
     return 0;
 }
 
@@ -121,9 +159,9 @@ void writeDoubleMatrix2IntInCSV(matrix m,char fname[]){
     fclose(fp);
 }
 
-void initMatrix(matrix *m,FILE *fp){
-    m->row = getRows(fp);
-    m->col = getCols(fp);
+void initMatrix(matrix *m,unsigned int row,unsigned int col){
+    m->row = row;
+    m->col = col;
     m->m = (double* *)malloc(sizeof(double*)*m->row);
     for(int i = 0;i < m->row;i++) m->m[i] = (double *)malloc(sizeof(double)*m->col);
 }
@@ -143,8 +181,8 @@ void testReadBinary(char fname[],char fname2[]){
     FILE *fp;
     FILE *fp2;
     unsigned char dataType[4];
-    unsigned char rows;
-    unsigned char cols;
+    unsigned char row;
+    unsigned char col;
     unsigned char val;
     unsigned int fsize = 0;
     matrix testM;
@@ -166,9 +204,11 @@ void testReadBinary(char fname[],char fname2[]){
 
     fsize = getMnistSize(fp);
     printf("fsize is %d\n",fsize);
-    initMatrix(&testM,fp);
-    initVector(&v,fp);
-    initVector(&tmp,fp);
+    row = getRows(fp);
+    col = getCols(fp);
+    initMatrix(&testM,row,col);
+    initVector(&v,row*col);
+    initVector(&tmp,row*col);
     initNeuron(&n,v.size,tmp.size);
     initLabel(&l,10);
     for(int i = 0;i < 1;i++){
@@ -193,8 +233,8 @@ void testReadBinary(char fname[],char fname2[]){
     fclose(fp);
 }
 
-void initVector(vector *v,FILE *fp){
-    v->size = getCols(fp)*getRows(fp);
+void initVector(vector *v,unsigned int size){
+    v->size = size;
     v->v = (double *)malloc(sizeof(double)*v->size);
 }
 
