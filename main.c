@@ -46,6 +46,7 @@ void calcVectorNeuron(vector v,neuron_params n,vector *r);
 double sigmoid(double x);
 void initLabel(labal *l,unsigned int size);
 void readMnistLabel(labal *l,FILE *fp,int num);
+void softmax(vector input,vector *output);
 
 int main(int argc, char const *argv[]){
     //testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
@@ -54,6 +55,7 @@ int main(int argc, char const *argv[]){
     neuron_params wb1;
     vector h1;
     neuron_params wb2;
+    vector h2;
     vector output;
     labal label;
     FILE *dataset;
@@ -83,9 +85,16 @@ int main(int argc, char const *argv[]){
     initNeuron(&wb1,input_size,hidden_size);
     initVector(&h1,hidden_size);
     initNeuron(&wb2,hidden_size,output_size);
+    initVector(&h2,output_size);
     initVector(&output,output_size);
     initLabel(&label,output_size);
 
+    readMnistVector(&input,dataset,0);
+    readMnistLabel(&label,labelset,0);
+    calcVectorNeuron(input,wb1,&h1);
+    calcVectorNeuron(h1,wb2,&h2);
+    softmax(h2,&output);
+    
     fclose(dataset);
     fclose(labelset);
     return 0;
@@ -270,11 +279,11 @@ void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_siz
     for(int i = 0;i < output_size;i++) n->weights[i] = (double *)malloc(sizeof(double)*input_size);
     for(int i = 0;i < output_size;i++)
         for(int j = 0;j < input_size;j++)
-            //n->weights[i][j] = 1;
-            n->weights[i][j] = (double)rand()/RAND_MAX;
+            n->weights[i][j] = 1;
+            //n->weights[i][j] = (double)rand()/RAND_MAX;
     n->bias = (double *)malloc(sizeof(double)*output_size);
-    for(int i = 0;i < output_size;i++) n->bias[i] = (double)rand()/RAND_MAX;
-    //for(int i = 0;i < output_size;i++) n->bias[i] = 0;
+    //for(int i = 0;i < output_size;i++) n->bias[i] = (double)rand()/RAND_MAX;
+    for(int i = 0;i < output_size;i++) n->bias[i] = 0;
 }
 
 void calcVectorNeuron(vector v,neuron_params n,vector *r){
@@ -308,4 +317,23 @@ void readMnistLabel(labal *l,FILE *fp,int num){
     l->result = (double)tmp;
     for(int i = 0;i < l->size;i++) l->array[i] = 0;
     l->array[tmp] = 1.0;
+}
+
+void softmax(vector input,vector *output){
+    if(input.size != output-> size){
+        printf("input and output error\n");
+        exit(-1);
+    }
+    double max_val = 0;
+    double all_exp = 0;
+    int count = 0;
+    for(int i = 0;i < input.size;i++)
+        max_val = max_val < input.v[i] ? input.v[i] : max_val;
+    for(int i = 0;i < input.size;i++) count += max_val == input.v[i] ? 1 : 0;
+    if(count == input.size)
+        for(int i = 0;i < count;i++) output->v[i] = 1/(double)count;
+    else{
+        for(int i = 0;i < input.size;i++) all_exp = exp(input.v[i]-max_val);
+        for(int i = 0;i < input.size;i++) output->v[i] = exp(input.v[i]-max_val)/all_exp;
+    }
 }
