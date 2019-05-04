@@ -8,6 +8,11 @@ typedef struct{
     double **m;
 }matrix;
 
+typedef struct{
+    unsigned char size;
+    double *v;
+}vector;
+
 void testReadBinary();
 
 void printBit(unsigned int val,int size);
@@ -19,6 +24,8 @@ void printDoubleMatrix(matrix m);
 void writeDoubleMatrix2IntInCSV(matrix m,char fname[]);
 void initMatrix(matrix *m,FILE *fp);
 void readMnistMatrix(matrix *m,FILE *fp,int num);
+void initVector(vector *v,FILE *fp);
+void readMnistVector(vector *v,FILE *fp,int num);
 
 int main(int argc, char const *argv[]){
     testReadBinary("dataset/mnist/t10k-images.idx3-ubyte");
@@ -65,21 +72,6 @@ unsigned char getCols(FILE *fp){
     return cols;
 }
 
-double** getMnistMatrix(FILE *fp,unsigned char rows,unsigned char cols,int num){
-    double** m;
-    unsigned char tmp;
-    fseek(fp,16+num*rows*cols,SEEK_SET);
-    m = (double* *)malloc(sizeof(double*)*rows);
-    for(int i = 0;i < rows;i++) m[i] = (double*)malloc(sizeof(double)*cols);
-    for(int i = 0;i < rows;i++){
-        for(int j = 0;j < cols;j++){
-            fread(&tmp,1,1,fp);
-            m[i][j] = (double)tmp;
-        }
-    }
-    return m;
-}
-
 void printDoubleMatrix(matrix m){
     for(int i = 0;i < m.row;i++){
         for(int j = 0;j < m.col;j++){
@@ -110,7 +102,14 @@ void initMatrix(matrix *m,FILE *fp){
 }
 
 void readMnistMatrix(matrix *m,FILE *fp,int num){
-    m->m = getMnistMatrix(fp,m->row,m->col,num);
+    unsigned char tmp;
+    fseek(fp,16+num*m->row*m->col,SEEK_SET);
+    for(int i = 0;i < m->row;i++){
+        for(int j = 0;j < m->col;j++){
+            fread(&tmp,1,1,fp);
+            m->m[i][j] = (double)tmp;
+        }
+    }
 }
 
 void testReadBinary(char fname[]){
@@ -141,4 +140,18 @@ void testReadBinary(char fname[]){
     printDoubleMatrix(testM);
 
     fclose(fp);
+}
+
+void initVector(vector *v,FILE *fp){
+    v->size = getCols(fp)*getRows(fp);
+    v->v = (double *)malloc(sizeof(double)*v->size);
+}
+
+void readMnistVector(vector *v,FILE *fp,int num){
+    unsigned char tmp;
+    fseek(fp,16+num*v->size,SEEK_SET);
+    for(int i = 0;i < v->size;i++){
+        fread(&tmp,1,1,fp);
+        v->v[i] = (double)tmp;
+    }
 }
