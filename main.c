@@ -96,6 +96,8 @@ int main(int argc, char const *argv[]){
     calcVectorNeuron(input,wb1,&h1);
     calcVectorNeuron(h1,wb2,&h2);
     softmax(h2,&output);
+    for(int i = 0;i < output_size;i++) printf(", %4.4f ",output.v[i]);
+    printf("\n");
     e = getCrossEntropyError(output,label);
     printf("e = %f\n",e);
     
@@ -330,16 +332,11 @@ void softmax(vector input,vector *output){
     }
     double max_val = 0;
     double all_exp = 0;
-    int count = 0;
     for(int i = 0;i < input.size;i++)
         max_val = max_val < input.v[i] ? input.v[i] : max_val;
-    for(int i = 0;i < input.size;i++) count += max_val == input.v[i] ? 1 : 0;
-    if(count == input.size)
-        for(int i = 0;i < count;i++) output->v[i] = 1/(double)count;
-    else{
-        for(int i = 0;i < input.size;i++) all_exp = exp(input.v[i]-max_val);
-        for(int i = 0;i < input.size;i++) output->v[i] = exp(input.v[i]-max_val)/all_exp;
-    }
+    for(int i = 0;i < input.size;i++) all_exp += exp(input.v[i]-max_val);
+    for(int i = 0;i < input.size;i++) output->v[i] = exp(input.v[i]-max_val)/all_exp;
+
 }
 
 double getCrossEntropyError(vector r,label l){
