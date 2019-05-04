@@ -343,5 +343,5 @@ void softmax(vector input,vector *output){
 }
 
 double getCrossEntropyError(vector r,label l){
-    return -1*log(r.v[(int)l.result]+0.000000001);
+    return -1*log(r.v[(int)l.result]+0.0001);
 }
