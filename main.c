@@ -421,12 +421,11 @@ void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params 
 }
 
 void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
-    double learning_rate = 0.01;
-    int batch_size = 100;
+    double learning_rate = 1;
+    int batch_size = 1;
     double e;
     int i,x,y,z;
     int num = 0;
-    neuron_params *calc_r;
     neuron_params *grad;
     vector r1;
     vector r2;
@@ -434,8 +433,6 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
     label label_data;
     grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
     for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
-    calc_r = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
-    for(i = 0;i < wb_size;i++) initNeuron(&calc_r[i],wb[i].input_size,wb[i].output_size);
     initVector(&input,wb[0].input_size);
     initLabel(&label_data,wb[wb_size-1].output_size);
     initVector(&r1,wb[wb_size-1].output_size);
@@ -452,7 +449,7 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
                     grad[x].bias[y] = 0;
                 }
             }
-            calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,wb_size,label_data,calc_r);
+            calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,wb_size,label_data,grad);
         }
         for(x = 0;x < wb_size;x++){
             for(y = 0;y < wb[x].output_size;y++){
@@ -467,9 +464,8 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
         forward(input,wb,wb_size,&r1);
         softmax(r1,&r2);
         e = getCrossEntropyError(r2,label_data);
-        printf("error = %f\n",e);
-    }while(abs(e) < 0.00001);
+        printf("error = %.50f\n",e);
+    }while(abs(e) > 0.00001);
 
     free(grad);
-    free(calc_r);
 }
