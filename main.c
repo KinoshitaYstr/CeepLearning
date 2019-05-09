@@ -27,8 +27,6 @@ typedef struct{
     double result;
 }label;
 
-void testReadBinary();
-
 void printBit(unsigned int val,int size);
 unsigned int getMnistSize(FILE *fp);
 unsigned char getRows(FILE *fp);
@@ -97,40 +95,6 @@ int main(int argc, char const *argv[]){
     initLabel(&label,output_size);
     SGD(wb,2,dataset,labelset,60000);
     writeNeuronsInCSV("test.csv",wb,2);
-    /*
-    readMnistVector(&input,dataset,0);
-    readMnistLabel(&label,labelset,0);
-    //calcVectorNeuron(input,wb[0],&h[0]);
-    //calcVectorNeuron(h[0],wb[1],&h[1]);
-    calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,2,label,grad);
-    unsigned int count = 0;
-    for(int i = 0;i < 2;i++){
-        for(int j = 0;j < grad[i].output_size;j++){
-            for(int k = 0;k < grad[i].input_size;k++){
-                printf("%f\n",grad[i].weights[j][k]);
-                if(grad[i].weights[j][k] != 0.0000){
-                    printf("%f\n",grad[i].weights[j][k]);
-                    count++;
-                }
-            }
-            printf("%f\n",grad[i].bias[j]);
-            if(grad[i].bias[j] != 0.0000){
-                printf("%f\n",grad[i].bias[j]);
-                count++;
-            }
-        }
-    }
-    printf("count = %d\n",count);
-    forward(input,wb,2,&h[1]);
-
-    printf("%d\n",h[1].size);
-    
-    softmax(h[1],&output);
-    for(int i = 0;i < output_size;i++) printf(", %4.4f ",output.v[i]);
-    printf("\n");
-    e = getCrossEntropyError(output,label);
-    printf("e = %f\n",e);
-    */
     fclose(dataset);
     fclose(labelset);
     return 0;
@@ -220,62 +184,6 @@ void readMnistMatrix(matrix *m,FILE *fp,int num){
             m->m[i][j] = (double)tmp/255.0;
         }
     }
-}
-
-void testReadBinary(char fname[],char fname2[]){
-    FILE *fp;
-    FILE *fp2;
-    unsigned char dataType[4];
-    unsigned char row;
-    unsigned char col;
-    unsigned char val;
-    unsigned int fsize = 0;
-    matrix testM;
-    vector v;
-    vector tmp;
-    neuron_params n;
-    label l;
-
-    fp = fopen(fname,"rb");
-    if(fp == NULL){
-        fputs("file read open error\n",stderr);
-        exit(-1);
-    }
-    fp2 = fopen(fname2,"rb");
-    if(fp == NULL){
-        fputs("file read open error\n",stderr);
-        exit(-1);
-    }
-
-    fsize = getMnistSize(fp);
-    printf("fsize is %d\n",fsize);
-    row = getRows(fp);
-    col = getCols(fp);
-    initMatrix(&testM,row,col);
-    initVector(&v,row*col);
-    initVector(&tmp,row*col);
-    initNeuron(&n,v.size,tmp.size);
-    initLabel(&l,10);
-    for(int i = 0;i < 1;i++){
-        readMnistMatrix(&testM,fp,i);
-        exchangeMatrx2Vector(testM,&v);
-        calcVectorNeuron(v,n,&tmp);
-        v = tmp;
-        exchangeVector2Matrix(v,&testM);
-        printDoubleMatrix(testM);
-        writeDoubleMatrix2IntInCSV(testM,"result/test.csv");
-    }
-    printf("-------------------------------");
-    printf("%d,%d\n",testM.col,testM.row);
-    printDoubleMatrix(testM);
-    for(int j = 0;j < 100;j++){
-        readMnistLabel(&l,fp2,j);
-        printf("label is %f\n",l.result);
-        for(int i = 0;i < 10;i++) printf("%4.1f,",l.array[i]);
-        printf("\n");
-    }
-
-    fclose(fp);
 }
 
 void initVector(vector *v,unsigned int size){
