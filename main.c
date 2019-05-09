@@ -51,6 +51,7 @@ double getCrossEntropyError(vector r,label l);
 void forward(vector input,neuron_params wb[],unsigned int wb_size,vector *output);
 void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad);
 void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size);
+void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size);
 
 int main(int argc, char const *argv[]){
     //testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
@@ -95,6 +96,7 @@ int main(int argc, char const *argv[]){
     initVector(&output,output_size);
     initLabel(&label,output_size);
     SGD(wb,2,dataset,labelset,60000);
+    writeNeuronsInCSV("test.csv",wb,2);
     /*
     readMnistVector(&input,dataset,0);
     readMnistLabel(&label,labelset,0);
@@ -421,7 +423,7 @@ void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params 
 }
 
 void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
-    double learning_rate = 1;
+    double learning_rate = 0.1;
     int batch_size = 1;
     double e;
     int i,x,y,z;
@@ -468,4 +470,20 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
     }while(abs(e) > 0.00001);
 
     free(grad);
+}
+
+void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size){
+    FILE *fp;
+    int i,j,k;
+    if((fp = fopen(fname,"w")) == NULL){
+        printf("create file error\n");
+        exit(-1);
+    }
+    for(i = 0;i < neuron_size;i++){
+        for(j = 0;j < n[i].output_size;j++){
+            for(k = 0;k < n[i].input_size;k++) fprintf(fp,"%f\n",n[i].weights[j][k]);
+            fprintf(fp,"%f\n",n[i].bias[j]);
+        }
+    }
+    fclose(fp);
 }
