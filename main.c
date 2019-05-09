@@ -50,6 +50,8 @@ void forward(vector input,neuron_params wb[],unsigned int wb_size,vector *output
 void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad);
 void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size);
 void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size);
+void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad);
+void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size);
 
 int main(int argc, char const *argv[]){
     //testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
@@ -97,6 +99,7 @@ int main(int argc, char const *argv[]){
     writeNeuronsInCSV("test.csv",wb,2);
     fclose(dataset);
     fclose(labelset);
+    //BP(wb,2,dataset,labelset,60000);
     return 0;
 }
 
@@ -394,4 +397,45 @@ void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size){
         }
     }
     fclose(fp);
+}
+
+void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad){
+    int i,j,k;
+    vector forward_r;
+    vector r;
+    vector calc_x[wb_size];
+    initVector(&forward_r,t.size);
+    initVector(&r,t.size);
+    for(i = 0;i < wb_size;i++) initVector(&calc_x[i],wb[i].input_size);
+    forward(x,wb,wb_size,&forward_r);
+    softmax(forward_r,&r);
+    for(i = 0;i < wb_size;i++){
+        printf("%d -> %d,%d\n",wb[i].input_size,wb[i].output_size,calc_x[i].size);
+    }
+}
+
+void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
+    double learning_rate = 0.1;
+    double e;
+    int i,x,y,z;
+    int num = 0;
+    neuron_params *grad;
+    vector input;
+    label label_data;
+    grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
+    for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
+    initVector(&input,wb[0].input_size);
+    initLabel(&label_data,wb[wb_size-1].output_size);
+
+    readMnistVector(&input,dataset_fp,num);
+    readMnistLabel(&label_data,label_fp,num);
+    for(x = 0;x < wb_size;x++){
+        for(y = 0;y < wb[x].output_size;y++){
+            for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0.0;
+            grad[x].bias[y] = 0.0;
+        }
+    }
+    calcBackProbagationForClossEntropyErrorAndSoftamx(input,wb,wb_size,label_data,grad);
+
+    free(grad);
 }
