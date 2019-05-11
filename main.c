@@ -52,10 +52,12 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
 void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size);
 void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad);
 void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size);
+matrix createMatrix(unsigned char row,unsigned char col);
+vector createVector(unsigned int size);
+neuron_params createNeuronParams(unsigned int input_size,unsigned output_size);
+label createLabel(unsigned int size);
 
 int main(int argc, char const *argv[]){
-    //testReadBinary("dataset/mnist/t10k-images.idx3-ubyte","dataset/mnist/t10k-labels.idx1-ubyte");
-    //testReadBinary("dataset/mnist/train-images.idx3-ubyte","dataset/mnist/train-labels.idx1-ubyte");
     vector input;
     neuron_params wb[2];
     neuron_params grad[2];
@@ -71,6 +73,7 @@ int main(int argc, char const *argv[]){
     unsigned int output_size;
     double e;
 
+    printf("open dataset and labelset\n");
     if((dataset = fopen("dataset/mnist/t10k-images.idx3-ubyte","rb")) == NULL){
         fputs("file read open error\n",stderr);
         exit(-1);
@@ -80,23 +83,33 @@ int main(int argc, char const *argv[]){
         exit(-1);
     }
 
+    printf("read dataset size etc...\n");
     input_row = getRows(dataset);
     input_col = getCols(dataset);
+
+    printf("network size setting\n");
     input_size = input_row*input_row;
     hidden_size = 100;
     output_size = 10;
 
-    initVector(&input,input_size);
-    initNeuron(&wb[0],input_size,hidden_size);
-    initNeuron(&grad[0],input_size,hidden_size);
-    initVector(&h[0],hidden_size);
-    initNeuron(&wb[1],hidden_size,output_size);
-    initNeuron(&grad[1],hidden_size,output_size);
-    initVector(&h[1],output_size);
-    initVector(&output,output_size);
-    initLabel(&label,output_size);
+    printf("init vector etc...\n");
+    input = createVector(input_size);
+    wb[0] = createNeuronParams(input_size,hidden_size);
+    grad[0] = createNeuronParams(input_size,hidden_size);
+    h[0] = createVector(hidden_size);
+    wb[1] = createNeuronParams(hidden_size,output_size);
+    grad[1] = createNeuronParams(hidden_size,output_size);
+    h[1] = createVector(output_size);
+    output = createVector(output_size);
+    label = createLabel(output_size);
+    
+    printf("learning\n");
     SGD(wb,2,dataset,labelset,60000);
+    
+    printf("write result's neuron\n");
     writeNeuronsInCSV("test.csv",wb,2);
+
+    printf("close dataset and labelset\n");
     fclose(dataset);
     fclose(labelset);
     //BP(wb,2,dataset,labelset,60000);
@@ -174,8 +187,8 @@ void writeDoubleMatrix2IntInCSV(matrix m,char fname[]){
 void initMatrix(matrix *m,unsigned int row,unsigned int col){
     m->row = row;
     m->col = col;
-    m->m = (double* *)malloc(sizeof(double*)*m->row);
-    for(int i = 0;i < m->row;i++) m->m[i] = (double *)malloc(sizeof(double)*m->col);
+    m->m = (double* *)realloc(m->m,sizeof(double*)*m->row);
+    for(int i = 0;i < m->row;i++) m->m[i] = (double *)realloc(m->m[i],sizeof(double)*m->col);
 }
 
 void readMnistMatrix(matrix *m,FILE *fp,int num){
@@ -191,7 +204,7 @@ void readMnistMatrix(matrix *m,FILE *fp,int num){
 
 void initVector(vector *v,unsigned int size){
     v->size = size;
-    v->v = (double *)malloc(sizeof(double)*v->size);
+    v->v = (double *)realloc(v->v,sizeof(double)*size);
 }
 
 void readMnistVector(vector *v,FILE *fp,int num){
@@ -222,13 +235,13 @@ void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_siz
     srand((unsigned)time(NULL));
     n->input_size = input_size;
     n->output_size = output_size;
-    n->weights = (double* *)malloc(sizeof(double*)*output_size);
-    for(int i = 0;i < output_size;i++) n->weights[i] = (double *)malloc(sizeof(double)*input_size);
+    n->weights = (double* *)realloc(n->weights,sizeof(double*)*output_size);
+    for(int i = 0;i < output_size;i++) n->weights[i] = (double *)realloc(n->weights[i],sizeof(double)*input_size);
     for(int i = 0;i < output_size;i++)
         for(int j = 0;j < input_size;j++)
             //n->weights[i][j] = 1;
             n->weights[i][j] = ((double)rand()/RAND_MAX)*0.01;
-    n->bias = (double *)malloc(sizeof(double)*output_size);
+    n->bias = (double *)realloc(n->bias,sizeof(double)*output_size);
     //for(int i = 0;i < output_size;i++) n->bias[i] = (double)rand()/RAND_MAX;
     for(int i = 0;i < output_size;i++) n->bias[i] = 0;
 }
@@ -253,7 +266,7 @@ double sigmoid(double x){
 }
 
 void initLabel(label *l,unsigned int size){
-    l->array = (double *)malloc(sizeof(double)*size);
+    l->array = (double *)realloc(l->array,sizeof(double)*size);
     l->size = size;
     l->result = 0;
 }
@@ -287,22 +300,31 @@ double getCrossEntropyError(vector r,label l){
 
 void forward(vector input,neuron_params wb[],unsigned int wb_size,vector *output){
     int i,j;
+    vector r;
+    vector input1;
+    input1 = createVector(input.size);
+    for(i = 0;i < input.size;i++) input1.v[i] = input.v[i];
+    r = createVector(wb[0].output_size);
     for(i = 0;i < wb_size;i++){
-        initVector(output,wb[i].output_size);
-        calcVectorNeuron(input,wb[i],output);
-        initVector(&input,wb[i].output_size);
-        for(j = 0;j < wb[i].output_size;j++) input.v = output->v;
+        initVector(&r,wb[i].output_size);
+        calcVectorNeuron(input1,wb[i],&r);
+        initVector(&input1,wb[i].output_size);
+        for(j = 0;j < r.size;j++) input1.v[j] = r.v[j];
     }
+    for(i = 0;i < r.size;i++) output->v[i] = r.v[i];
+    free(r.v);
+    free(input1.v);
 }
 
 void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad){
     double delta = 0.001;
     double e1,e2;
     int i,j,k;
+    int tmp;
     vector forward_r;
     vector r;
-    initVector(&forward_r,t.size);
-    initVector(&r,t.size);
+    forward_r = createVector(t.size);
+    r = createVector(t.size);
     for(i = 0;i < wb_size;i++){
         for(j = 0;j < wb[i].output_size;j++){
             for(k = 0;k < wb[i].input_size;k++){
@@ -330,27 +352,30 @@ void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params 
             grad[i].bias[j] += (e2-e1)/(2*delta);
         }
     }
-
+    free(forward_r.v);
+    free(r.v);
 }
 
 void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
-    double learning_rate = 0.1;
+    double learning_rate = 1;
     int batch_size = 1;
     double e;
     int i,x,y,z;
     int num = 0;
+    int count = 1;
     neuron_params *grad;
     vector r1;
     vector r2;
     vector input;
     label label_data;
     grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
-    for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
-    initVector(&input,wb[0].input_size);
-    initLabel(&label_data,wb[wb_size-1].output_size);
-    initVector(&r1,wb[wb_size-1].output_size);
-    initVector(&r2,wb[wb_size-1].output_size);
-
+    for(i = 0;i < wb_size;i++){
+        grad[i] = createNeuronParams(wb[i].input_size,wb[i].output_size);
+    }
+    input = createVector(wb[0].input_size);
+    label_data = createLabel(wb[wb_size-1].output_size);
+    r1 = createVector(wb[wb_size-1].output_size);
+    r2 = createVector(wb[wb_size-1].output_size);
     do{
         for(i = 0;i < batch_size;i++){
             num = (int)(rand()*(dataset_size+1)/(RAND_MAX+1));
@@ -377,7 +402,8 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
         forward(input,wb,wb_size,&r1);
         softmax(r1,&r2);
         e = getCrossEntropyError(r2,label_data);
-        printf("error = %.50f\n",e);
+        printf("No%d -> error = %.50f\n",count,e);
+        count++;
     }while(abs(e) > 0.00001);
 
     free(grad);
@@ -422,7 +448,7 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     neuron_params *grad;
     vector input;
     label label_data;
-    grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
+    grad = (neuron_params *)realloc(grad,sizeof(neuron_params)*wb_size);
     for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
     initVector(&input,wb[0].input_size);
     initLabel(&label_data,wb[wb_size-1].output_size);
@@ -438,4 +464,43 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     calcBackProbagationForClossEntropyErrorAndSoftamx(input,wb,wb_size,label_data,grad);
 
     free(grad);
+}
+
+matrix createMatrix(unsigned char row,unsigned char col){
+    matrix m;
+    m.row = row;
+    m.col = col;
+    m.m = (double* *)malloc(sizeof(double*)*row);
+    for(int i = 0;i < row;i++) m.m[i] = (double *)malloc(sizeof(double)*col);
+    return m;
+}
+
+vector createVector(unsigned int size){
+    vector v;
+    v.size = size;
+    v.v = (double *)malloc(sizeof(double)*size);
+    return v;
+}
+
+neuron_params createNeuronParams(unsigned int input_size,unsigned output_size){
+    neuron_params n;
+    int i,j;
+    n.input_size = input_size;
+    n.output_size = output_size;
+    n.weights = (double* *)malloc(sizeof(double*)*output_size);
+    n.bias = (double *)malloc(sizeof(double)*output_size);
+    for(i = 0;i < output_size;i++){
+        n.weights[i] = (double *)malloc(sizeof(double)*input_size);
+        for(j = 0;j < input_size;j++) n.weights[i][j] = ((double)rand()/RAND_MAX)*0.01;
+        n.bias[i] = 0;
+    }
+    return n;
+}
+
+label createLabel(unsigned int size){
+    label l;
+    l.size = size;
+    l.result = 0;
+    l.array = (double *)malloc(sizeof(double)*size);
+    return l;
 }
