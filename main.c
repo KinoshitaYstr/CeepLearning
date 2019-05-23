@@ -426,18 +426,70 @@ void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size){
 }
 
 void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad){
-    int i,j,k;
+    int i,j,k,n,m;
+    int count = 0;
     vector forward_r;
     vector r;
-    vector calc_x[wb_size];
+    vector calc_x[wb_size+1];
     forward_r = createVector(t.size);
     r = createVector(t.size);
-    for(i = 0;i < wb_size;i++) calc_x[i] = createVector(wb[i].input_size);
-    forward(x,wb,wb_size,&forward_r);
-    softmax(forward_r,&r);
+    calc_x[0] = createVector(x.size);
+    for(i = 0;i < x.size;i++) calc_x[0].v[i] = x.v[i];
     for(i = 0;i < wb_size;i++){
-        printf("%d -> %d,%d\n",wb[i].input_size,wb[i].output_size,calc_x[i].size);
+        calc_x[i+1] = createVector(wb[i].output_size);
+        calcVectorNeuron(calc_x[i],wb[i],&calc_x[i+1]);
     }
+    for(int i = 0;i < t.size;i++) forward_r.v[i] = calc_x[wb_size].v[i];
+    softmax(forward_r,&calc_x[wb_size]);
+    for(i = 0;i < r.size;i++) r.v[i] =  calc_x[wb_size].v[i]-t.array[i];
+
+    for(i = 0;i < wb_size;i++)
+    for(j = 0;j < wb[i].output_size;j++)
+        for(k = 0;k < wb[i].input_size;k++)
+            if(grad[i].weights[j][k] != 0) count++;
+    printf("not zero size is %d\n",count);
+
+
+    for(i = wb_size-1;i >= 0;i--){
+        initVector(&forward_r,wb[i].input_size);
+        /*
+        printf("-------------------------\n");
+        printf("i is %d\n",i);
+        printf("forward_r size is %d\n",forward_r.size);
+        printf("wb[%d] inout size %d\n",i,wb[i].input_size);
+        printf("wb[%d] output size %d\n",i,wb[i].output_size);
+        printf("calc_x[%d] size is %d\n",i+1,calc_x[i+1].size);
+        printf("%d -> %d,%d\n",wb[i].input_size,wb[i].output_size,calc_x[i].size);
+        printf("-------------------------\n");
+        printf("calc_x[%d] size is %d\n",i,calc_x[i].size);
+        printf("r size is %d\n",r.size);
+        printf("grad[%d] inout size %d\n",i,grad[i].input_size);
+        printf("grad[%d] output size %d\n",i,grad[i].output_size);
+        */
+        for(j = 0;j < grad[i].output_size;j++){
+            grad[i].bias[j] += r.v[j];
+            for(k = 0;k < grad[i].input_size;k++){
+                grad[i].weights[j][k] += r.v[j]*calc_x[i].v[k];
+            }
+        }
+        for(j = 0;j < forward_r.size;j++){
+            forward_r.v[j] = 0;
+            for(k = 0;k < r.size;k++){
+                forward_r.v[j] += r.v[k]*wb[i].weights[k][j];
+            }
+        }
+        initVector(&r,wb[i].input_size);
+        for(j = 0;j < r.size;j++) r.v[j] = forward_r.v[j];
+    }
+    count = 0;
+    for(i = 0;i < wb_size;i++)
+        for(j = 0;j < wb[i].output_size;j++)
+            for(k = 0;k < wb[i].input_size;k++)
+                if(grad[i].weights[j][k] != 0.0){
+                    count++;
+                    //printf("%f\n",grad[i].weights[j][k]);
+                }
+    printf("not zero size is %d\n",count);
     free(forward_r.v);
     free(r.v);
     for(i = 0;i < wb_size;i++) free(calc_x[i].v);
@@ -445,35 +497,70 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb
 
 void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
     double learning_rate = 0.1;
+    int batch_size = 1;
     double e;
     int i,x,y,z;
     int num = 0;
+    int count = 1;
+    int aaa;
     neuron_params *grad;
+    neuron_params *grad2;
+    vector r1;
+    vector r2;
     vector input;
     label label_data;
     printf("create grad\n");
     grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
+    grad2 = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
     //for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
     for(i = 0;i < wb_size;i++){
         printf("%d -> ",i);
         grad[i] = createNeuronParams(wb[i].input_size,wb[i].output_size);
+        grad2[i] = createNeuronParams(wb[i].input_size,wb[i].output_size);
         printf("%d\n",i);
     }
     printf("create input\n");
     input = createVector(wb[0].input_size);
     printf("create label\n");
     label_data = createLabel(wb[wb_size-1].output_size);
+    r1 = createVector(wb[wb_size-1].output_size);
+    r2 = createVector(wb[wb_size-1].output_size);
 
-    readMnistVector(&input,dataset_fp,num);
-    readMnistLabel(&label_data,label_fp,num);
-    for(x = 0;x < wb_size;x++){
-        printf("x is %d\n",x);
-        for(y = 0;y < wb[x].output_size;y++){
-            for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0.0;
-            grad[x].bias[y] = 0.0;
+    do{
+        for(i = 0;i < batch_size;i++){
+            num = (int)(rand()*(dataset_size+1)/(RAND_MAX+1));
+            readMnistVector(&input,dataset_fp,num);
+            readMnistLabel(&label_data,label_fp,num);
+            for(x = 0;x < wb_size;x++){
+                for(y = 0;y < wb[x].output_size;y++){
+                    for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0.0;
+                    grad[x].bias[y] = 0.0;
+                }
+            }
+            calcBackProbagationForClossEntropyErrorAndSoftamx(input,wb,wb_size,label_data,grad);
+            //calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,wb_size,label_data,grad2);
         }
-    }
-    calcBackProbagationForClossEntropyErrorAndSoftamx(input,wb,wb_size,label_data,grad);
+        aaa = 0;
+        for(x = 0;x < wb_size;x++){
+            for(y = 0;y < wb[x].output_size;y++){
+                for(z = 0;z < wb[x].input_size;z++){
+                    if(grad[x].weights[y][z] != 0) aaa++;
+                    //printf("%f : %f\n",grad[x].weights[y][z],grad2[x].weights[y][z]);
+                    wb[x].weights[y][z] -= learning_rate*grad[x].weights[y][z]/batch_size;
+                    grad[x].weights[y][z] = 0.0;
+                }
+              //  printf("%f : %f\n",grad[x].bias[y],grad2[x].bias[y]);
+                wb[x].bias[y] -= learning_rate*grad[x].bias[y]/batch_size;
+                grad[x].bias[y] = 0.0;
+            }
+        }
+        printf("aaa is %d\n",aaa);
+        forward(input,wb,wb_size,&r1);
+        softmax(r1,&r2);
+        e = getCrossEntropyError(r2,label_data);
+        printf("No%d -> error = %.50f\n",count,e);
+        count++;
+    }while(abs(e) > 0.00001);
     
     free(grad);
 }
