@@ -56,6 +56,7 @@ matrix createMatrix(unsigned char row,unsigned char col);
 vector createVector(unsigned int size);
 neuron_params createNeuronParams(unsigned int input_size,unsigned output_size);
 label createLabel(unsigned int size);
+int simple_accracy_check(vector x,label l);
 
 int main(int argc, char const *argv[]){
     vector input;
@@ -378,7 +379,7 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
     r2 = createVector(wb[wb_size-1].output_size);
     do{
         for(i = 0;i < batch_size;i++){
-            num = (int)(rand()*(dataset_size+1)/(RAND_MAX+1));
+            num = rand()%dataset_size;
             readMnistVector(&input,dataset_fp,num);
             readMnistLabel(&label_data,label_fp,num);
             for(x = 0;x <wb_size;x++){
@@ -512,17 +513,17 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx2(vector x,neuron_params w
     for(i = 0;i < t.size;i++) forward_r.v[i] = calc_x[wb_size].v[i] - t.array[i];
     for(i = wb_size-1;i >= 0;i--){
         // grad バイアスの代入
-        printf("grad[%d] bias[%d] = forward_r v[%d]\n",i,grad[i].output_size,forward_r.size);
+        //printf("grad[%d] bias[%d] = forward_r v[%d]\n",i,grad[i].output_size,forward_r.size);
         for(j = 0;j < calc_x[i+1].size;j++) grad[i].bias[j] = forward_r.v[j];
         // grad 重さの計算
-        printf("grad[%d] weights[%d,%d] = grad[%d] bias[%d]*calc_x[%d] v[%d]\n",i,grad[i].output_size,grad[i].input_size,i,grad[i].output_size,i,calc_x[i].size);
+        //printf("grad[%d] weights[%d,%d] = grad[%d] bias[%d]*calc_x[%d] v[%d]\n",i,grad[i].output_size,grad[i].input_size,i,grad[i].output_size,i,calc_x[i].size);
         for(j = 0;j < grad[i].output_size;j++)
             for(k = 0;k < grad[i].input_size;k++)
                 grad[i].weights[j][k] = grad[i].bias[j]*calc_x[i].v[k];
         // x 一個前の値の計算？
-        printf("forward_r v[%d] <- wb[%d] input[%d]\n",forward_r.size,i,wb[i].input_size);
+        //printf("forward_r v[%d] <- wb[%d] input[%d]\n",forward_r.size,i,wb[i].input_size);
         forward_r = createVector(wb[i].input_size);
-        printf("forward_r v[%d] = grad[%d] bias[%d] * wb[%d] mat[%d,%d]\n",forward_r.size,i,grad[i].output_size,i,wb[i].output_size,wb[i].input_size);
+        //printf("forward_r v[%d] = grad[%d] bias[%d] * wb[%d] mat[%d,%d]\n",forward_r.size,i,grad[i].output_size,i,wb[i].output_size,wb[i].input_size);
         for(j = 0;j < forward_r.size;j++){
             forward_r.v[j] = 0.0;
             for(k = 0;k < grad[i].output_size;k++){
@@ -539,22 +540,16 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     int i,x,y,z;
     int num = 0;
     int count = 1;
-    int aaa;
     neuron_params *grad;
-    neuron_params *grad2;
     vector r1;
     vector r2;
     vector input;
     label label_data;
     printf("create grad\n");
     grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
-    grad2 = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
     //for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
     for(i = 0;i < wb_size;i++){
-        printf("%d -> ",i);
         grad[i] = createNeuronParams(wb[i].input_size,wb[i].output_size);
-        grad2[i] = createNeuronParams(wb[i].input_size,wb[i].output_size);
-        printf("%d\n",i);
     }
     printf("create input\n");
     input = createVector(wb[0].input_size);
@@ -565,7 +560,8 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
 
     do{
         for(i = 0;i < batch_size;i++){
-            num = (int)(rand()*(dataset_size+1)/(RAND_MAX+1));
+            num = rand()%dataset_size;
+            printf("num is %d,%d\n",num);
             readMnistVector(&input,dataset_fp,num);
             readMnistLabel(&label_data,label_fp,num);
             for(x = 0;x < wb_size;x++){
@@ -575,28 +571,25 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
                 }
             }
             calcBackProbagationForClossEntropyErrorAndSoftamx2(input,wb,wb_size,label_data,grad);
-            //calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,wb_size,label_data,grad2);
         }
-        aaa = 0;
         for(x = 0;x < wb_size;x++){
             for(y = 0;y < wb[x].output_size;y++){
                 for(z = 0;z < wb[x].input_size;z++){
-                    if(grad[x].weights[y][z] != 0) aaa++;
-                    //printf("%f : %f\n",grad[x].weights[y][z],grad2[x].weights[y][z]);
                     wb[x].weights[y][z] -= learning_rate*grad[x].weights[y][z]/batch_size;
                     grad[x].weights[y][z] = 0.0;
                 }
-              //  printf("%f : %f\n",grad[x].bias[y],grad2[x].bias[y]);
                 wb[x].bias[y] -= learning_rate*grad[x].bias[y]/batch_size;
                 grad[x].bias[y] = 0.0;
             }
         }
-        printf("aaa is %d\n",aaa);
         forward(input,wb,wb_size,&r1);
         softmax(r1,&r2);
         e = getCrossEntropyError(r2,label_data);
         printf("No%d -> error = %.50f\n",count,e);
+        if(simple_accracy_check(r2,label_data) == 1) printf("ok\n");
+        else printf("--no\n");
         count++;
+        
     }while(abs(e) > 0.00001);
     
     free(grad);
@@ -639,4 +632,15 @@ label createLabel(unsigned int size){
     l.result = 0;
     l.array = (double *)malloc(sizeof(double)*size);
     return l;
+}
+
+int simple_accracy_check(vector x,label l){
+    int x_data;
+    int i;
+    x_data = 0;
+    for(i = 0;i < x.size;i++)
+        if(x.v[i] > x.v[x_data])
+            x_data = i;
+    if(x_data == (int)l.result) return 1;
+    else -1;
 }
