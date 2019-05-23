@@ -105,11 +105,11 @@ int main(int argc, char const *argv[]){
     label = createLabel(output_size);
     
     printf("learning\n");
-    //SGD(wb,2,dataset,labelset,60000);
-    BP(wb,2,dataset,labelset,60000);
+    SGD(wb,2,dataset,labelset,60000);
+    //BP(wb,2,dataset,labelset,60000);
     
-    //printf("write result's neuron\n");
-    //writeNeuronsInCSV("test.csv",wb,2);
+    printf("write result's neuron\n");
+    writeNeuronsInCSV("test.csv",wb,2);
 
     printf("close dataset and labelset\n");
     fclose(dataset);
@@ -359,7 +359,7 @@ void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params 
 
 void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
     double learning_rate = 1;
-    int batch_size = 1;
+    int batch_size = 10;
     double e;
     int i,x,y,z;
     int num = 0;
