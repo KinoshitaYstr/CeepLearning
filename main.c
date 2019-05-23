@@ -495,6 +495,43 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb
     for(i = 0;i < wb_size;i++) free(calc_x[i].v);
 }
 
+void calcBackProbagationForClossEntropyErrorAndSoftamx2(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad){
+    int i,j,k,n,m;
+    int count = 0;
+    vector calc_x[wb_size+1];
+    vector forward_r;
+    calc_x[0] = createVector(x.size);
+    for(i = 0;i < x.size;i++) calc_x[0].v[i] = x.v[i];
+    for(i = 0;i < wb_size;i++){
+        calc_x[i+1] = createVector(wb[i].output_size);
+        calcVectorNeuron(calc_x[i],wb[i],&calc_x[i+1]);
+    }
+    forward_r = createVector(t.size);
+    for(i = 0;i < forward_r.size;i++) forward_r.v[i] = calc_x[wb_size].v[i];
+    softmax(forward_r,&calc_x[wb_size]);
+    for(i = 0;i < t.size;i++) forward_r.v[i] = calc_x[wb_size].v[i] - t.array[i];
+    for(i = wb_size-1;i >= 0;i--){
+        // grad バイアスの代入
+        printf("grad[%d] bias[%d] = forward_r v[%d]\n",i,grad[i].output_size,forward_r.size);
+        for(j = 0;j < calc_x[i+1].size;j++) grad[i].bias[j] = forward_r.v[j];
+        // grad 重さの計算
+        printf("grad[%d] weights[%d,%d] = grad[%d] bias[%d]*calc_x[%d] v[%d]\n",i,grad[i].output_size,grad[i].input_size,i,grad[i].output_size,i,calc_x[i].size);
+        for(j = 0;j < grad[i].output_size;j++)
+            for(k = 0;k < grad[i].input_size;k++)
+                grad[i].weights[j][k] = grad[i].bias[j]*calc_x[i].v[k];
+        // x 一個前の値の計算？
+        printf("forward_r v[%d] <- wb[%d] input[%d]\n",forward_r.size,i,wb[i].input_size);
+        forward_r = createVector(wb[i].input_size);
+        printf("forward_r v[%d] = grad[%d] bias[%d] * wb[%d] mat[%d,%d]\n",forward_r.size,i,grad[i].output_size,i,wb[i].output_size,wb[i].input_size);
+        for(j = 0;j < forward_r.size;j++){
+            forward_r.v[j] = 0.0;
+            for(k = 0;k < grad[i].output_size;k++){
+                forward_r.v[j] += grad[i].bias[k]*wb[i].weights[k][j];
+            }
+        }
+    }
+}
+
 void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
     double learning_rate = 0.1;
     int batch_size = 1;
@@ -537,7 +574,7 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
                     grad[x].bias[y] = 0.0;
                 }
             }
-            calcBackProbagationForClossEntropyErrorAndSoftamx(input,wb,wb_size,label_data,grad);
+            calcBackProbagationForClossEntropyErrorAndSoftamx2(input,wb,wb_size,label_data,grad);
             //calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,wb_size,label_data,grad2);
         }
         aaa = 0;
