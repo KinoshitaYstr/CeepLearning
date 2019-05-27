@@ -344,7 +344,6 @@ void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params 
     for(i = 0;i < wb_size;i++){
         for(j = 0;j < wb[i].output_size;j++){
             for(k = 0;k < wb[i].input_size;k++){
-                //printf("%d,%d,%d\n",i,j,k);
                 wb[i].weights[j][k] -= delta;
                 forward(x,wb,wb_size,&forward_r);
                 softmax(forward_r,&r);
@@ -418,7 +417,6 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
         }
         forward(input,wb,wb_size,&r1);
         softmax(r1,&r2);
-        //e = getCrossEntropyError(r2,label_data);
         accurate = accracy_check(wb,wb_size,testdata_fp,testlabel_fp,test_size);
         printf("No%d -> accurate = %.50f\n",count,accurate);
         count++;
@@ -463,30 +461,12 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb
     for(int i = 0;i < t.size;i++) forward_r.v[i] = calc_x[wb_size].v[i];
     softmax(forward_r,&calc_x[wb_size]);
     for(i = 0;i < r.size;i++) r.v[i] =  calc_x[wb_size].v[i]-t.array[i];
-
     for(i = 0;i < wb_size;i++)
     for(j = 0;j < wb[i].output_size;j++)
         for(k = 0;k < wb[i].input_size;k++)
             if(grad[i].weights[j][k] != 0) count++;
-    printf("not zero size is %d\n",count);
-
-
     for(i = wb_size-1;i >= 0;i--){
         initVector(&forward_r,wb[i].input_size);
-        /*
-        printf("-------------------------\n");
-        printf("i is %d\n",i);
-        printf("forward_r size is %d\n",forward_r.size);
-        printf("wb[%d] inout size %d\n",i,wb[i].input_size);
-        printf("wb[%d] output size %d\n",i,wb[i].output_size);
-        printf("calc_x[%d] size is %d\n",i+1,calc_x[i+1].size);
-        printf("%d -> %d,%d\n",wb[i].input_size,wb[i].output_size,calc_x[i].size);
-        printf("-------------------------\n");
-        printf("calc_x[%d] size is %d\n",i,calc_x[i].size);
-        printf("r size is %d\n",r.size);
-        printf("grad[%d] inout size %d\n",i,grad[i].input_size);
-        printf("grad[%d] output size %d\n",i,grad[i].output_size);
-        */
         for(j = 0;j < grad[i].output_size;j++){
             grad[i].bias[j] += r.v[j];
             for(k = 0;k < grad[i].input_size;k++){
@@ -508,7 +488,6 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb
             for(k = 0;k < wb[i].input_size;k++)
                 if(grad[i].weights[j][k] != 0.0){
                     count++;
-                    //printf("%f\n",grad[i].weights[j][k]);
                 }
     printf("not zero size is %d\n",count);
     free(forward_r.v);
@@ -587,7 +566,6 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     createLabel(&label_data,wb[wb_size-1].output_size);
     createVector(&r1,wb[wb_size-1].output_size);
     createVector(&r2,wb[wb_size-1].output_size);
-
     do{
         for(x = 0;x < wb_size;x++){
             for(y = 0;y < wb[x].output_size;y++){
@@ -612,8 +590,6 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
             }
         }
         forward(input,wb,wb_size,&r1);
-        //softmax(r1,&r2);
-        //e = getCrossEntropyError(r2,label_data);
         printf("No%d -> accurate = ",count);
         accurate = accracy_check(wb,wb_size,testdata_fp,testlabel_fp,test_size);
         count++;
