@@ -48,15 +48,16 @@ void softmax(vector input,vector *output);
 double getCrossEntropyError(vector r,label l);
 void forward(vector input,neuron_params wb[],unsigned int wb_size,vector *output);
 void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad);
-void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size);
+void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size,FILE *testdata_fp,FILE *testlabel_fp,int test_size);
 void writeNeuronsInCSV(char fname[],neuron_params n[],int neuron_size);
 void calcBackProbagationForClossEntropyErrorAndSoftamx(vector x,neuron_params wb[],unsigned int wb_size,label t,neuron_params *grad);
-void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size);
+void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size,FILE *testdata_fp,FILE *testlabel_fp,int test_size);
 matrix createMatrix(unsigned char row,unsigned char col);
 vector createVector(unsigned int size);
 neuron_params createNeuronParams(unsigned int input_size,unsigned output_size);
 label createLabel(unsigned int size);
 int simple_accracy_check(vector x,label l);
+double accracy_check(neuron_params wb[],unsigned int wb_size,FILE *dataset,FILE *labelset,unsigned int dataset_size);
 
 int main(int argc, char const *argv[]){
     vector input;
@@ -67,6 +68,8 @@ int main(int argc, char const *argv[]){
     label label;
     FILE *dataset;
     FILE *labelset;
+    FILE *test_dataset;
+    FILE *test_labelset;
     unsigned int input_row;
     unsigned int input_col;
     unsigned int input_size;
@@ -75,11 +78,21 @@ int main(int argc, char const *argv[]){
     double e;
 
     printf("open dataset and labelset\n");
-    if((dataset = fopen("dataset/mnist/t10k-images.idx3-ubyte","rb")) == NULL){
+    if((dataset = fopen("dataset/mnist/train-images.idx3-ubyte","rb")) == NULL){
         fputs("file read open error\n",stderr);
         exit(-1);
     }
-    if((labelset = fopen("dataset/mnist/t10k-labels.idx1-ubyte","rb")) == NULL){
+    if((labelset = fopen("dataset/mnist/train-labels.idx1-ubyte","rb")) == NULL){
+        fputs("file read open error\n",stderr);
+        exit(-1);
+    }
+
+    printf("open dataset and labelset\n");
+    if((test_dataset = fopen("dataset/mnist/t10k-images.idx3-ubyte","rb")) == NULL){
+        fputs("file read open error\n",stderr);
+        exit(-1);
+    }
+    if((test_labelset = fopen("dataset/mnist/t10k-labels.idx1-ubyte","rb")) == NULL){
         fputs("file read open error\n",stderr);
         exit(-1);
     }
@@ -105,8 +118,8 @@ int main(int argc, char const *argv[]){
     label = createLabel(output_size);
     
     printf("learning\n");
-    SGD(wb,2,dataset,labelset,60000);
-    //BP(wb,2,dataset,labelset,60000);
+    //SGD(wb,2,dataset,labelset,60000,test_dataset,test_labelset,10000);
+    BP(wb,2,dataset,labelset,60000,test_dataset,test_labelset,10000);
     
     printf("write result's neuron\n");
     writeNeuronsInCSV("test.csv",wb,2);
@@ -114,6 +127,8 @@ int main(int argc, char const *argv[]){
     printf("close dataset and labelset\n");
     fclose(dataset);
     fclose(labelset);
+    fclose(test_dataset);
+    fclose(test_labelset);
     return 0;
 }
 
@@ -357,10 +372,11 @@ void calcNumericalGradientForClossEntropyErrorAndSoftmax(vector x,neuron_params 
     free(r.v);
 }
 
-void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
+void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size,FILE *testdata_fp,FILE *testlabel_fp,int test_size){
     double learning_rate = 1;
     int batch_size = 10;
     double e;
+    double accurate;
     int i,x,y,z;
     int num = 0;
     int count = 1;
@@ -378,16 +394,16 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
     r1 = createVector(wb[wb_size-1].output_size);
     r2 = createVector(wb[wb_size-1].output_size);
     do{
+        for(x = 0;x <wb_size;x++){
+            for(y = 0;y < wb[x].output_size;y++){
+                for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0;
+                grad[x].bias[y] = 0;
+            }
+        }
         for(i = 0;i < batch_size;i++){
             num = rand()%dataset_size;
             readMnistVector(&input,dataset_fp,num);
             readMnistLabel(&label_data,label_fp,num);
-            for(x = 0;x <wb_size;x++){
-                for(y = 0;y < wb[x].output_size;y++){
-                    for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0;
-                    grad[x].bias[y] = 0;
-                }
-            }
             calcNumericalGradientForClossEntropyErrorAndSoftmax(input,wb,wb_size,label_data,grad);
         }
         for(x = 0;x < wb_size;x++){
@@ -402,10 +418,11 @@ void SGD(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,
         }
         forward(input,wb,wb_size,&r1);
         softmax(r1,&r2);
-        e = getCrossEntropyError(r2,label_data);
-        printf("No%d -> error = %.50f\n",count,e);
+        //e = getCrossEntropyError(r2,label_data);
+        accurate = accracy_check(wb,wb_size,testdata_fp,testlabel_fp,test_size);
+        printf("No%d -> accurate = %.50f\n",count,accurate);
         count++;
-    }while(abs(e) > 0.00001);
+    }while(accurate > 0.00001);
 
     free(grad);
 }
@@ -501,6 +518,7 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx2(vector x,neuron_params w
     int count = 0;
     vector calc_x[wb_size+1];
     vector forward_r;
+    vector forward_r_tmp;
     calc_x[0] = createVector(x.size);
     for(i = 0;i < x.size;i++) calc_x[0].v[i] = x.v[i];
     for(i = 0;i < wb_size;i++){
@@ -508,18 +526,23 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx2(vector x,neuron_params w
         calcVectorNeuron(calc_x[i],wb[i],&calc_x[i+1]);
     }
     forward_r = createVector(t.size);
+    forward_r_tmp = createVector(t.size);
     for(i = 0;i < forward_r.size;i++) forward_r.v[i] = calc_x[wb_size].v[i];
     softmax(forward_r,&calc_x[wb_size]);
     for(i = 0;i < t.size;i++) forward_r.v[i] = calc_x[wb_size].v[i] - t.array[i];
     for(i = wb_size-1;i >= 0;i--){
         // grad バイアスの代入
         //printf("grad[%d] bias[%d] = forward_r v[%d]\n",i,grad[i].output_size,forward_r.size);
-        for(j = 0;j < calc_x[i+1].size;j++) grad[i].bias[j] = forward_r.v[j];
+        forward_r_tmp = createVector(forward_r.size);
+        for(j = 0;j < calc_x[i+1].size;j++){
+            grad[i].bias[j] += forward_r.v[j];
+            forward_r_tmp.v[j] = forward_r.v[j];
+        }
         // grad 重さの計算
         //printf("grad[%d] weights[%d,%d] = grad[%d] bias[%d]*calc_x[%d] v[%d]\n",i,grad[i].output_size,grad[i].input_size,i,grad[i].output_size,i,calc_x[i].size);
         for(j = 0;j < grad[i].output_size;j++)
             for(k = 0;k < grad[i].input_size;k++)
-                grad[i].weights[j][k] = grad[i].bias[j]*calc_x[i].v[k];
+                grad[i].weights[j][k] += forward_r_tmp.v[j]*calc_x[i].v[k];
         // x 一個前の値の計算？
         //printf("forward_r v[%d] <- wb[%d] input[%d]\n",forward_r.size,i,wb[i].input_size);
         forward_r = createVector(wb[i].input_size);
@@ -527,15 +550,19 @@ void calcBackProbagationForClossEntropyErrorAndSoftamx2(vector x,neuron_params w
         for(j = 0;j < forward_r.size;j++){
             forward_r.v[j] = 0.0;
             for(k = 0;k < grad[i].output_size;k++){
-                forward_r.v[j] += grad[i].bias[k]*wb[i].weights[k][j];
+                forward_r.v[j] += forward_r_tmp.v[j]*wb[i].weights[k][j];
             }
         }
     }
+    free(forward_r_tmp.v);
+    free(forward_r.v);
+    for(i = 0;i < wb_size;i++) free(calc_x[i].v);
 }
 
-void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size){
+void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,int dataset_size,FILE *testdata_fp,FILE *testlabel_fp,int test_size){
     double learning_rate = 0.1;
-    int batch_size = 1;
+    double accurate;
+    int batch_size = 128;
     double e;
     int i,x,y,z;
     int num = 0;
@@ -545,6 +572,8 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     vector r2;
     vector input;
     label label_data;
+    FILE *fp;
+    fp = fopen("test_accrate_bp.csv","w");
     printf("create grad\n");
     grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
     //for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
@@ -559,17 +588,16 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     r2 = createVector(wb[wb_size-1].output_size);
 
     do{
+        for(x = 0;x < wb_size;x++){
+            for(y = 0;y < wb[x].output_size;y++){
+                for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0.0;
+                grad[x].bias[y] = 0.0;
+            }
+        }
         for(i = 0;i < batch_size;i++){
             num = rand()%dataset_size;
-            printf("num is %d,%d\n",num);
             readMnistVector(&input,dataset_fp,num);
             readMnistLabel(&label_data,label_fp,num);
-            for(x = 0;x < wb_size;x++){
-                for(y = 0;y < wb[x].output_size;y++){
-                    for(z = 0;z < wb[x].input_size;z++) grad[x].weights[y][z] = 0.0;
-                    grad[x].bias[y] = 0.0;
-                }
-            }
             calcBackProbagationForClossEntropyErrorAndSoftamx2(input,wb,wb_size,label_data,grad);
         }
         for(x = 0;x < wb_size;x++){
@@ -583,15 +611,14 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
             }
         }
         forward(input,wb,wb_size,&r1);
-        softmax(r1,&r2);
-        e = getCrossEntropyError(r2,label_data);
-        printf("No%d -> error = %.50f\n",count,e);
-        if(simple_accracy_check(r2,label_data) == 1) printf("ok\n");
-        else printf("--no\n");
+        //softmax(r1,&r2);
+        //e = getCrossEntropyError(r2,label_data);
+        printf("No%d -> accurate = ",count);
+        accurate = accracy_check(wb,wb_size,testdata_fp,testlabel_fp,test_size);
+        fprintf(fp,"%d,%ld\n",count,accurate);
         count++;
-        
-    }while(abs(e) > 0.00001);
-    
+    }while(accurate < 0.9);
+    fclose(fp);
     free(grad);
 }
 
@@ -643,4 +670,28 @@ int simple_accracy_check(vector x,label l){
             x_data = i;
     if(x_data == (int)l.result) return 1;
     else -1;
+}
+
+double accracy_check(neuron_params wb[],unsigned int wb_size,FILE *dataset,FILE *labelset,unsigned int dataset_size){
+    int i,j;
+    int count = 0;
+    int max;
+    vector data;
+    vector output;
+    label label_data;
+    data = createVector(wb[0].input_size);
+    output = createVector(wb[wb_size-1].output_size);
+    label_data = createLabel(wb[wb_size-1].output_size);
+    for(i = 0;i < dataset_size;i++){
+        readMnistVector(&data,dataset,i);
+        readMnistLabel(&label_data,labelset,i);
+        forward(data,wb,wb_size,&output);
+        max = 0;
+        for(j = 0;j < label_data.size;j++){
+            if(output.v[max] < output.v[j]) max = j;
+        }
+        if(max == label_data.result) count++;
+    }
+    printf("%d/%d = %f\n",count,dataset_size,(double)count/dataset_size);
+    return (double)count/dataset_size;
 }
