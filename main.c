@@ -575,8 +575,6 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
     vector r2;
     vector input;
     label label_data;
-    FILE *fp;
-    fp = fopen("test_accrate_bp.csv","w");
     printf("create grad\n");
     grad = (neuron_params *)malloc(sizeof(neuron_params)*wb_size);
     //for(i = 0;i < wb_size;i++) initNeuron(&grad[i],wb[i].input_size,wb[i].output_size);
@@ -618,11 +616,8 @@ void BP(neuron_params *wb,unsigned int wb_size,FILE *dataset_fp,FILE *label_fp,i
         //e = getCrossEntropyError(r2,label_data);
         printf("No%d -> accurate = ",count);
         accurate = accracy_check(wb,wb_size,testdata_fp,testlabel_fp,test_size);
-        fprintf(fp,"aaaaaaaaaa\n");
-        //fprintf(fp,"%d,%f\n",count,accurate);
         count++;
     }while(accurate < 0.9);
-    fclose(fp);
     free(grad);
     free(r1.v);
     free(r2.v);
