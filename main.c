@@ -180,7 +180,7 @@ void writeDoubleMatrix2IntInCSV(matrix m,char fname[]){
     fclose(fp);
 }
 void initMatrix(matrix *m,unsigned int row,unsigned int col){
-    for(int i = 0;i < m->row) free(m->m[i]);
+    for(int i = 0;i < m->row;i++) free(m->m[i]);
     free(m->m);
     m->row = row;
     m->col = col;
