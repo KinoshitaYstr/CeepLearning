@@ -180,9 +180,11 @@ void writeDoubleMatrix2IntInCSV(matrix m,char fname[]){
     fclose(fp);
 }
 void initMatrix(matrix *m,unsigned int row,unsigned int col){
+    for(int i = 0;i < m->row) free(m->m[i]);
+    free(m->m);
     m->row = row;
     m->col = col;
-    m->m = (double* *)realloc(m->m,sizeof(double*)*m->row);
+    m->m = (double* *)malloc(sizeof(double*)*m->row);
     for(int i = 0;i < m->row;i++) m->m[i] = (double *)malloc(sizeof(double)*m->col);
 }
 void readMnistMatrix(matrix *m,FILE *fp,int num){
@@ -197,7 +199,8 @@ void readMnistMatrix(matrix *m,FILE *fp,int num){
 }
 void initVector(vector *v,unsigned int size){
     v->size = size;
-    v->v = (double *)realloc(v->v,sizeof(double)*size);
+    free(v->v);
+    v->v = (double *)malloc(sizeof(double)*size);
 }
 void readMnistVector(vector *v,FILE *fp,int num){
     unsigned char tmp;
@@ -224,13 +227,16 @@ void initNeuron(neuron_params *n,unsigned int input_size,unsigned int output_siz
     srand((unsigned)time(NULL));
     n->input_size = input_size;
     n->output_size = output_size;
-    n->weights = (double* *)realloc(n->weights,sizeof(double*)*output_size);
+    for(int i = 0;i < output_size;i++) free(n->weights[i]);
+    free(n->weights);
+    free(n->bias);
+    n->weights = (double* *)malloc(sizeof(double*)*output_size);
     for(int i = 0;i < output_size;i++){
-        n->weights[i] = (double *)realloc(n->weights[i],sizeof(double)*input_size);
+        n->weights[i] = (double *)malloc(sizeof(double)*input_size);
         for(int j = 0;j < input_size;j++)
             n->weights[i][j] = ((double)rand()/RAND_MAX)*0.01;
     }
-    n->bias = (double *)realloc(n->bias,sizeof(double)*output_size);
+    n->bias = (double *)malloc(sizeof(double)*output_size);
     for(int i = 0;i < output_size;i++) n->bias[i] = 0;
 }
 void calcVectorNeuron(vector v,neuron_params n,vector *r){
@@ -251,7 +257,8 @@ double sigmoid(double x){
     return 1/(1+exp(-1*x));
 }
 void initLabel(label *l,unsigned int size){
-    l->array = (double *)realloc(l->array,sizeof(double)*size);
+    free(l->array);
+    l->array = (double *)malloc(sizeof(double)*size);
     l->size = size;
     l->result = 0;
 }
